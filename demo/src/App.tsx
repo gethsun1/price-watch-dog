@@ -1,12 +1,15 @@
 import { useMemo, useState } from "react";
 import "./App.css";
-import workflowYaml from "../../workflow.yaml?raw";
-import { parseAndValidate, executeWorkflow } from "../../kernels/krnl.ts";
-import { fetchPrice } from "../../kernels/fetch.ts";
-import { verifyPrice } from "../../kernels/verify.ts";
-import { comparePrice } from "../../kernels/compare.ts";
-import { buildReturnPayload } from "../../kernels/return.ts";
-import { deliverResult } from "../../kernels/deliver.ts";
+import workflowYaml from "./watchdog/workflow.yaml?raw";
+import {
+  parseAndValidate,
+  executeWorkflow,
+  fetchPrice,
+  verifyPrice,
+  comparePrice,
+  buildReturnPayload,
+  deliverResult,
+} from "./watchdog";
 
 type Outcome = "ABOVE_RANGE" | "BELOW_RANGE" | "WITHIN_RANGE";
 
