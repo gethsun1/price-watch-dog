@@ -1,7 +1,6 @@
 import { expect } from "chai";
 import fs from "fs";
-import { parseAndValidate, executeWorkflow } from "@krnl-dev/sdk-core";
-import { fetchPrice } from "../kernels/fetch.ts";
+import { parseAndValidate, executeWorkflow } from "../kernels/krnl.ts";
 import { verifyPrice } from "../kernels/verify.ts";
 import { comparePrice } from "../kernels/compare.ts";
 import { buildReturnPayload } from "../kernels/return.ts";
@@ -14,6 +13,31 @@ describe("workflow validation and execution (stubbed)", () => {
     expect(res.valid).to.be.true;
   });
 
+  it("fails validation on a broken DAG (missing required edge)", () => {
+    const broken = `
+name: broken
+inputs:
+  token: string
+  chain: string
+nodes:
+  fetch: { module: ./kernels/fetch.ts, function: fetchPrice, outputs: [quote] }
+  verify: { module: ./kernels/verify.ts, function: verifyPrice, inputs: [quote], outputs: [signedQuote] }
+  compare: { module: ./kernels/compare.ts, function: comparePrice, inputs: [request, signedQuote], outputs: [compare] }
+  return: { module: ./kernels/return.ts, function: buildReturnPayload, inputs: [request, signedQuote, compare], outputs: [result] }
+  deliver: { module: ./kernels/deliver.ts, function: deliverResult, inputs: [result, chains, targetContract, triggers], outputs: [delivery] }
+edges:
+  - from: fetch
+    to: verify
+  - from: verify
+    to: compare
+  - from: compare
+    to: return
+`;
+    const res = parseAndValidate({ yamlContent: broken });
+    expect(res.valid).to.equal(false);
+    expect((res as any).errors?.join(" ")).to.contain("missing required edge: return -> deliver");
+  });
+
   it("executes workflow with local handlers", async () => {
     const yamlContent = fs.readFileSync("workflow.yaml", "utf8");
     const res = parseAndValidate({ yamlContent });
@@ -24,7 +48,10 @@ describe("workflow validation and execution (stubbed)", () => {
       handlers: {
         fetch: async () => ({
           token: "ethereum",
+          chain: "sepolia",
           price: 1,
+          priceE8: "100000000",
+          priceDecimals: 8,
           currency: "USD",
           source: "mock",
           fetchedAt: 1,

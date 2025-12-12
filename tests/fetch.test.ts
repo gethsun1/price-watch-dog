@@ -16,6 +16,9 @@ describe("fetchPrice", () => {
     });
 
     expect(result.price).to.equal(1234.56);
+    expect(result.priceE8).to.equal("123456000000");
+    expect(result.priceDecimals).to.equal(8);
+    expect(result.chain).to.equal("sepolia");
     expect(result.currency).to.equal("USD");
     expect(result.source).to.equal("coingecko");
     expect(result.fetchedAt).to.equal(1700000000000);

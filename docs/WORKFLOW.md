@@ -1,6 +1,6 @@
 # Workflow Details
 
-This document describes the watchdog workflow defined in `workflow.yaml` and how to extend or validate it using the SDK helper scripts.
+This document describes the watchdog workflow defined in `workflow.yaml` and how to validate/execute it locally.
 
 ## Inputs
 - `token` (string): Coingecko id for the asset.
@@ -13,15 +13,15 @@ This document describes the watchdog workflow defined in `workflow.yaml` and how
 
 ## Nodes
 - `fetch`: Calls the price API (default Coingecko) using SDK HTTP (signed where supported). Output: `quote`.
-- `verify`: Signs the quote via SDK proof (ephemeral) or local signer. Output: `signedQuote`.
+- `verify`: Signs the quote payload (decimal-safe, `priceE8` + `priceDecimals`). Tries KRNL proof first (when available) and falls back to a local signer. Output: `signedQuote`.
 - `compare`: Evaluates bounds and produces `compare` (ABOVE_RANGE | BELOW_RANGE | WITHIN_RANGE).
 - `return`: Packages a `WatchdogResult` for downstream use. Output: `result`.
 - `deliver`: Builds a UserOp payload and relays across target `chains`; optional triggers (update/pause/notify) can emit additional proofs. Output: `delivery`.
 
 ## Running & Validation
-- Validate DAG: `npm run krnl:validate` (uses `scripts/validateWorkflow.ts` + SDK parser).
-- Execute locally: `npm run krnl:run` (uses `scripts/runWorkflow.ts` + SDK executor); set `PWD_TARGET_CONTRACT` and `PWD_CHAINS` to simulate delivery.
-- Harness: `npx ts-node kernels/runLocal.ts` (runs the same handlers via the SDK executor).
+- Validate DAG: `npm run krnl:validate` (strict validator; fails on broken DAGs).
+- Execute locally: `npm run krnl:run` (DAG executor + kernels).\n+  - Required: `PWD_TARGET_CONTRACT`\n+  - Chains: `PWD_CHAINS=1,137` or `PWD_CHAINS='[\"1\",\"137\"]'`\n+  - Optional: `API_URL_OVERRIDE` (maps to `apiUrl`)\n+  - Optional: `PWD_USE_KRNL_PROOF=0` (force local signer path)
+- Harness: `node --loader ts-node/esm kernels/runLocal.ts` (same handlers via workflow executor).
 
 ## Extending
 - Swap `fetch` API: pass `apiUrl` or adjust `kernels/fetch.ts`.

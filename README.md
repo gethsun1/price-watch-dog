@@ -1,39 +1,43 @@
-# Cross-Chain Price Watchdog Kernel (Weeks 1–3)
+# Cross-Chain Price Watchdog Kernel 
 
 KRNL-powered price watchdog: fetch → verify → compare → return → deliver (multi-chain), with docs and a React demo.
 
 ## Status
-- SDK: using local stub `@krnl-dev/sdk-core` (file: deps/krnl-dev-sdk-core). Swap to the official package when registry access succeeds.
-- CLI: `@krnl-dev/krnl-cli` installed globally (used for future deploys; validation/run now handled via SDK scripts).
-- Workflow extended with deliver node + triggers; docs and demo app scaffolded.
+- SDK: `@krnl-dev/sdk-core` is provided via `file:deps/krnl-dev-sdk-core` for local/dev. Swap to the official package when available.
+- Workflow: strict validator + executor enforce the required pipeline `fetch → verify → compare → return → deliver` (multi-chain).
+- Contract: `contracts/PriceWatcher.sol` consumes `deliver` calldata and verifies `digest/signature/signer` for the signed quote.
 
 ## Quickstart
 ```bash
 npm install
 npm test
 npm run krnl:validate
-npm run krnl:run        # executes workflow via SDK executor
+npm run krnl:run        # executes workflow via DAG executor + kernels
 ```
 Env hints:
 ```bash
-echo "PRICEWATCHDOG_SIGNER_KEY=<private_key>" > .env
+echo "PRICEWATCHDOG_SIGNER_KEY=<private_key>" > .env   # optional fallback signer
 echo "PWD_TARGET_CONTRACT=<onchain_addr>" >> .env
-echo "PWD_CHAINS=1,137" >> .env
+echo "PWD_CHAINS=1,137" >> .env                        # or: ["1","137"]
+echo "API_URL_OVERRIDE=<https_url>" >> .env            # optional
+echo "PWD_USE_KRNL_PROOF=0" >> .env                    # optional: force local signer path
 ```
 
+## KRNL runbook (Sepolia + EIP-7702)
+- See `docs/KRNL_RUNBOOK.md` for deployment (`krnl deploy`), attestor image creation, frontend env wiring, and end-to-end execution with UserOp delivery to `PriceWatcher.handleResult`.
+
 ## Usage
-- Harness: `npx ts-node kernels/runLocal.ts` (uses SDK executor + workflow.yaml).
-- Validate DAG: `npm run krnl:validate` (SDK parser).
-- Execute DAG: `npm run krnl:run` (SDK executor; uses env vars above).
-- React demo: `cd demo && npm install && npm run dev` (UI to fetch/compare/deliver + proof/UserOp preview).
+- Validate DAG: `npm run krnl:validate` (strict validator).
+- Execute DAG: `npm run krnl:run` (DAG executor; uses env vars above).
+- React demo: `cd demo && npm install && npm run dev` (UI executes the DAG and displays fetched price, compare result, proof, userOp + relay preview). Requires Node 20+ for Vite 7.
 
 ## Layout
 - `kernels/` — fetch, verify, compare, return, deliver; `runLocal.ts` harness.
 - `workflow.yaml` — DAG with deliver + triggers.
 - `tests/` — mocha/chai (fetch, compare, deliver, workflow validation/execution).
 - `scripts/` — SDK-based validate/run helpers.
-- `contracts/PriceWatcher.sol` — example consumer (proof verify stub).
-- `docs/` — `WORKFLOW.md`, `architecture.svg`.
+- `contracts/PriceWatcher.sol` — example consumer with on-chain proof verification.
+- `docs/` — `WORKFLOW.md`, `KRNL_RUNBOOK.md`, `architecture.svg`.
 - `demo/` — React/Vite TS demo app.
 
 ## Extending
@@ -42,7 +46,6 @@ echo "PWD_CHAINS=1,137" >> .env
 - On-chain verification: wire proof checks into `PriceWatcher.sol` once SDK on-chain helpers are available.
 
 ## Troubleshooting
-- npm ESM warning: add `"type": "module"` if you prefer ESM; current scripts force CJS via `TS_NODE_COMPILER_OPTIONS`.
-- SDK fetch failures: ensure outbound HTTPS is allowed; fallback to `apiUrl` override.
-- Registry access: if the official SDK is unreachable, keep using the bundled stub until access is restored.
+- SDK fetch failures: ensure outbound HTTPS is allowed; fallback to `API_URL_OVERRIDE`.
+- Demo build warning: Vite 7 requires Node 20.19+ (Node 18 may build with warnings but is not supported).
 

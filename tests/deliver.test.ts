@@ -1,5 +1,6 @@
 import { expect } from "chai";
 import { deliverResult } from "../kernels/deliver.ts";
+import { Interface } from "ethers";
 import type {
   DeliverRequest,
   RelayReceipt,
@@ -7,23 +8,27 @@ import type {
   WatchdogResult,
 } from "../kernels/types.ts";
 
+const iface = new Interface(["function handleResult(bytes result, bytes proof)"]);
+
 const sampleResult: WatchdogResult = {
   request: {
     token: "eth",
     chain: "sepolia",
     lowerBound: 1500,
     upperBound: 2500,
-    apiUrl: undefined,
   },
   quote: {
     token: "eth",
+    chain: "sepolia",
     price: 2000,
+    priceE8: "200000000000",
+    priceDecimals: 8,
     currency: "USD",
     source: "test",
     fetchedAt: 1,
-    signature: "0xsig",
-    signer: "0xsigner",
-    digest: "0xdigest",
+    signature: `0x${"22".repeat(65)}`,
+    signer: "0x1111111111111111111111111111111111111111",
+    digest: `0x${"11".repeat(32)}`,
   },
   compare: {
     status: "WITHIN_RANGE",
@@ -55,6 +60,10 @@ describe("deliverResult", () => {
     expect((output.userOp as any).nonce).to.equal("1");
     expect(output.payload.compare.status).to.equal("WITHIN_RANGE");
     expect(output.deliveredAt).to.equal(1234);
+
+    const decoded = iface.decodeFunctionData("handleResult", (output.userOp as any).callData);
+    expect(decoded[1]).to.be.a("string");
+    expect((output.userOp as any).to).to.equal("0xcontract");
   });
 
   it("executes optional triggers when enabled", async () => {
@@ -72,12 +81,12 @@ describe("deliverResult", () => {
     const output = await deliverResult(req, {
       createUserOp: (params) => params,
       relayMultiChain: async () => [{ chain: "1", hash: "0xabc", dispatchedAt: 10 }],
-      triggerAction: async () => triggers[0],
+      triggerAction: async () => triggers[0]!,
       now: () => 999,
     });
 
     expect(output.triggers).to.deep.equal(triggers);
-    expect(output.relays[0].chain).to.equal("1");
+    expect(output.relays[0]!.chain).to.equal("1");
     expect(output.payload.compare.status).to.equal("ABOVE_RANGE");
   });
 });

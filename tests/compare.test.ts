@@ -4,7 +4,10 @@ import type { PriceCheckRequest, SignedPriceQuote } from "../kernels/types.ts";
 
 const quoteBase: SignedPriceQuote = {
   token: "eth",
+  chain: "sepolia",
   price: 2000,
+  priceE8: "200000000000",
+  priceDecimals: 8,
   currency: "USD",
   source: "test",
   fetchedAt: 0,

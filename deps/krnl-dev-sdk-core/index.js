@@ -1,18 +1,10 @@
-import axios from "axios";
-import { keccak256, toUtf8Bytes, Wallet, getBytes } from "ethers";
+const axios = require("axios");
+const { randomBytes } = require("crypto");
+const { keccak256, toUtf8Bytes, Wallet } = require("ethers");
+const yaml = require("js-yaml");
+const fs = require("fs");
 
-// Browser-compatible random bytes generator
-const randomBytes = (size) => {
-  const bytes = new Uint8Array(size);
-  if (typeof window !== 'undefined' && window.crypto) {
-    window.crypto.getRandomValues(bytes);
-    return bytes;
-  }
-  // For Node.js, use a simple fallback
-  return new Uint8Array(size).map(() => Math.floor(Math.random() * 256));
-};
-
-export const http = {
+const http = {
   // Minimal passthrough HTTP GET; in real SDK this would sign requests.
   get: async (url, opts = {}) => {
     return axios.get(url, opts);
@@ -22,12 +14,12 @@ export const http = {
   },
 };
 
-export const proof = {
+const proof = {
   // Generates an ephemeral signature over JSON payload; placeholder for real proofing.
   generateEphemeral: async (payload) => {
     const signer = Wallet.createRandom();
     const digest = keccak256(toUtf8Bytes(JSON.stringify(payload)));
-    const signature = await signer.signMessage(getBytes(digest));
+    const signature = await signer.signMessage(toUtf8Bytes(digest));
     return {
       digest,
       signature,
@@ -42,14 +34,14 @@ export const proof = {
   }),
 };
 
-export const userOp = {
+const userOp = {
   create: (params) => ({
     ...params,
-    nonce: Array.from(randomBytes(4)).map(b => b.toString(16).padStart(2, '0')).join(''),
+    nonce: randomBytes(4).toString("hex"),
   }),
 };
 
-export const relay = {
+const relay = {
   multiChain: async (chains, op) => {
     const now = Date.now();
     return chains.map((chain) => ({
@@ -61,7 +53,7 @@ export const relay = {
   },
 };
 
-export const trigger = {
+const trigger = {
   action: async (name, payload) => ({
     name,
     payload,
@@ -69,17 +61,17 @@ export const trigger = {
   }),
 };
 
-export const parseAndValidate = ({ yamlPath, yamlContent }) => {
-  // Browser environment - yamlContent must be provided
-  if (!yamlContent) {
-    throw new Error("yamlContent is required in browser environment");
+const parseAndValidate = ({ yamlPath, yamlContent }) => {
+  const content = yamlContent ?? fs.readFileSync(yamlPath, "utf8");
+  const parsed = yaml.load(content);
+  if (!parsed?.nodes) {
+    throw new Error("workflow missing nodes");
   }
-  // For browser, we skip yaml parsing for now
-  return { valid: true, workflow: {} };
+  return { valid: true, workflow: parsed };
 };
 
 // Minimal local executor that runs the known nodes in order if provided.
-export const executeWorkflow = async ({ workflow, handlers, input }) => {
+const executeWorkflow = async ({ workflow, handlers, input }) => {
   const fetchFn = handlers?.fetch;
   const verifyFn = handlers?.verify;
   const compareFn = handlers?.compare;
@@ -99,5 +91,15 @@ export const executeWorkflow = async ({ workflow, handlers, input }) => {
       })
     : undefined;
   return { quote, signed, compare, result, delivery };
+};
+
+module.exports = {
+  http,
+  proof,
+  userOp,
+  relay,
+  trigger,
+  parseAndValidate,
+  executeWorkflow,
 };
 

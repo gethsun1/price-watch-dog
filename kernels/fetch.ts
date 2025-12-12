@@ -1,6 +1,11 @@
 import axios from "axios";
-import { http } from "@krnl-dev/sdk-core";
+import { http } from "./krnl.ts";
 import type { PriceCheckRequest, PriceQuote } from "./types.ts";
+import {
+  DEFAULT_PRICE_DECIMALS,
+  fromScaledIntString,
+  toScaledIntString,
+} from "./price.ts";
 
 type HttpGet = (url: string) => Promise<{ data: unknown }>;
 
@@ -14,7 +19,7 @@ const defaultApiFor = (token: string) =>
     token,
   )}&vs_currencies=usd`;
 
-function extractPrice(token: string, data: unknown): number {
+function extractPriceRaw(token: string, data: unknown): number | string {
   if (typeof data !== "object" || data === null) {
     throw new Error("price response was empty");
   }
@@ -30,12 +35,7 @@ function extractPrice(token: string, data: unknown): number {
     throw new Error("price not found in response");
   }
 
-  const price = Number(priceCandidate);
-  if (!Number.isFinite(price)) {
-    throw new Error("price was not numeric");
-  }
-
-  return price;
+  return priceCandidate as number | string;
 }
 
 export async function fetchPrice(
@@ -51,11 +51,20 @@ export async function fetchPrice(
   const apiUrl = request.apiUrl ?? defaultApiFor(token);
 
   const response = await httpGet(apiUrl);
-  const price = extractPrice(token, response.data);
+  const raw = extractPriceRaw(token, response.data);
+  const priceDecimals = DEFAULT_PRICE_DECIMALS;
+  const priceE8 = toScaledIntString(
+    typeof raw === "string" || typeof raw === "number" ? raw : String(raw),
+    priceDecimals,
+  );
+  const price = fromScaledIntString(priceE8, priceDecimals);
 
   return {
     token,
+    chain,
     price,
+    priceE8,
+    priceDecimals,
     currency: "USD",
     source: request.apiUrl ? "custom" : "coingecko",
     fetchedAt: now(),

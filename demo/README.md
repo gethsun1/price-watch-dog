@@ -1,73 +1,23 @@
-# React + TypeScript + Vite
+# Price Watchdog Demo (Vite)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Simple UI to execute the full DAG locally (fetch → verify → compare → return → deliver) using `workflow.yaml`, and display the fetched price, compare outcome, proof, and UserOp/relay preview.
 
-Currently, two official plugins are available:
-
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+## Setup
+```bash
+cd demo
+cp env.example .env     # fill with Sepolia + KRNL values
+npm install
+npm run dev
 ```
+Note: Vite 7 requires Node 20.19+ or 22.12+.
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+Key envs (see `.env`):
+- `VITE_PRICEWATCHER_ADDRESS`: deployed contract on Sepolia
+- `VITE_CHAIN_ID`: default chain list (e.g., `11155111`)
+- `PIMLICO_API_KEY`, `VITE_RPC_URL`, `VITE_DELEGATED_ACCOUNT_ADDRESS`, `VITE_DELEGATE_OWNER`
+- `VITE_ATTESTOR_IMAGE`, `VITE_PRIVY_APP_ID/SECRET`
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+## Flow
+1) Enter token/lower/upper/target contract/chains (prefilled from env).
+2) Click **Run Watchdog** to execute `workflow.yaml` end-to-end and preview the delivery artifacts.
+3) Use the values in your KRNL workflow trigger to run on-chain; contract emits `ResultHandled`.

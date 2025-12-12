@@ -3,12 +3,13 @@
   "version": "1.0.0",
   "description": "",
   "main": "dist/index.js",
+  "type": "module",
   "scripts": {
     "build": "tsc",
-    "test": "mocha -r ts-node/register \"tests/**/*.test.ts\"",
-    "dev": "ts-node src/index.ts",
-    "krnl:validate": "TS_NODE_COMPILER_OPTIONS='{\"module\":\"commonjs\",\"verbatimModuleSyntax\":false}' ts-node scripts/validateWorkflow.ts",
-    "krnl:run": "TS_NODE_COMPILER_OPTIONS='{\"module\":\"commonjs\",\"verbatimModuleSyntax\":false}' ts-node scripts/runWorkflow.ts"
+    "test": "node --loader ts-node/esm node_modules/mocha/bin/mocha.js \"tests/**/*.test.ts\"",
+    "dev": "node --loader ts-node/esm src/index.ts",
+    "krnl:validate": "node --loader ts-node/esm scripts/validateWorkflow.ts",
+    "krnl:run": "node --loader ts-node/esm scripts/runWorkflow.ts"
   },
   "keywords": [],
   "author": "",
@@ -22,6 +23,7 @@
   },
   "devDependencies": {
     "@types/chai": "^5.2.3",
+    "@types/js-yaml": "^4.0.9",
     "@types/mocha": "^10.0.10",
     "@types/node": "^25.0.1",
     "chai": "^6.2.1",

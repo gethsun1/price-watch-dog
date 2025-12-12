@@ -10,7 +10,16 @@ export interface PriceCheckRequest {
 
 export interface PriceQuote {
   token: string;
+  chain: string;
+  /**
+   * Human-friendly price (USD) for UI/logging.
+   * Canonical value for signing/ABI encoding is `priceE8`.
+   */
   price: number;
+  /** Canonical scaled integer string: price * 1e8 */
+  priceE8: string;
+  /** Number of decimals used for price scaling (default: 8) */
+  priceDecimals: number;
   currency: string;
   source: string;
   fetchedAt: number;
@@ -20,6 +29,8 @@ export interface SignedPriceQuote extends PriceQuote {
   signature: string;
   signer: string;
   digest: string;
+  /** Attestation/proof timestamp (may differ from fetchedAt) */
+  provedAt?: number;
 }
 
 export interface CompareResult {

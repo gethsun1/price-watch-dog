@@ -1,6 +1,12 @@
 import { useMemo, useState } from "react";
 import "./App.css";
-import * as sdk from "@krnl-dev/sdk-core";
+import workflowYaml from "../../workflow.yaml?raw";
+import { parseAndValidate, executeWorkflow } from "../../kernels/krnl.ts";
+import { fetchPrice } from "../../kernels/fetch.ts";
+import { verifyPrice } from "../../kernels/verify.ts";
+import { comparePrice } from "../../kernels/compare.ts";
+import { buildReturnPayload } from "../../kernels/return.ts";
+import { deliverResult } from "../../kernels/deliver.ts";
 
 type Outcome = "ABOVE_RANGE" | "BELOW_RANGE" | "WITHIN_RANGE";
 
@@ -12,25 +18,18 @@ interface RunResult {
   relays?: Array<{ chain: string; hash: string }>;
 }
 
-const coingeckoUrl = (token: string) =>
-  `https://api.coingecko.com/api/v3/simple/price?ids=${encodeURIComponent(
-    token,
-  )}&vs_currencies=usd`;
-
-const parsePrice = (token: string, data: unknown): number => {
-  const anyData = data as any;
-  const price =
-    anyData?.[token]?.usd ?? anyData?.usd ?? anyData?.price ?? anyData?.priceUsd;
-  if (!Number.isFinite(Number(price))) throw new Error("price missing from API");
-  return Number(price);
-};
-
 function App() {
-  const [token, setToken] = useState("ethereum");
-  const [lower, setLower] = useState<string>("1500");
-  const [upper, setUpper] = useState<string>("3500");
-  const [chains, setChains] = useState("1,137");
-  const [targetContract, setTargetContract] = useState("0x");
+  const defaultToken = import.meta.env.VITE_DEFAULT_TOKEN ?? "ethereum";
+  const defaultLower = import.meta.env.VITE_DEFAULT_LOWER ?? "1500";
+  const defaultUpper = import.meta.env.VITE_DEFAULT_UPPER ?? "3500";
+  const defaultChains = import.meta.env.VITE_CHAIN_ID ?? "1,137";
+  const defaultTarget = import.meta.env.VITE_PRICEWATCHER_ADDRESS ?? "0x";
+
+  const [token, setToken] = useState(defaultToken);
+  const [lower, setLower] = useState<string>(defaultLower);
+  const [upper, setUpper] = useState<string>(defaultUpper);
+  const [chains, setChains] = useState(defaultChains);
+  const [targetContract, setTargetContract] = useState(defaultTarget);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<RunResult | null>(null);
@@ -44,59 +43,54 @@ function App() {
     [upper],
   );
 
-  const computeOutcome = (price: number): Outcome => {
-    if (upperNum !== undefined && price > upperNum) return "ABOVE_RANGE";
-    if (lowerNum !== undefined && price < lowerNum) return "BELOW_RANGE";
-    return "WITHIN_RANGE";
-  };
-
   const run = async () => {
     setLoading(true);
     setError(null);
     setResult(null);
     try {
-      const cgResp = await sdk.http.get(coingeckoUrl(token));
-      const price = parsePrice(token, cgResp.data);
-      const outcome = computeOutcome(price);
+      const validated = parseAndValidate({ yamlContent: workflowYaml });
+      if (!validated.valid) {
+        const errs = (validated as any).errors?.join("; ") ?? "unknown validation error";
+        throw new Error(`workflow invalid: ${errs}`);
+      }
 
-      const payload = {
-        token,
-        price,
-        lowerBound: lowerNum,
-        upperBound: upperNum,
-        targetContract,
-        chains: chains.split(",").map((c) => c.trim()).filter(Boolean),
-        outcome,
-      };
+      const chainList = chains
+        .split(",")
+        .map((c: string) => c.trim())
+        .filter(Boolean);
 
-      const proofRes = sdk.proof.generateEphemeral
-        ? await sdk.proof.generateEphemeral(payload)
-        : undefined;
-
-      const op = sdk.userOp.create
-        ? sdk.userOp.create({
-          to: targetContract,
-          data: { outcome, price, token, lower: lowerNum, upper: upperNum },
-          metadata: { chains: payload.chains },
-        })
-        : undefined;
-
-      const relayRes = sdk.relay.multiChain
-        ? await sdk.relay.multiChain(payload.chains, op ?? {})
-        : [];
+      const execution = await executeWorkflow({
+        workflow: validated.workflow,
+        input: {
+          token,
+          chain: chainList[0] ?? "sepolia",
+          lowerBound: lowerNum,
+          upperBound: upperNum,
+          chains: chainList,
+          targetContract,
+        },
+        handlers: {
+          fetch: fetchPrice,
+          verify: verifyPrice,
+          compare: comparePrice,
+          returnNode: buildReturnPayload,
+          deliver: deliverResult,
+        },
+      });
 
       setResult({
-        price,
-        outcome,
-        proof: proofRes
-          ? {
-              digest: proofRes.digest,
-              signature: proofRes.signature,
-              signer: proofRes.signer,
-            }
-          : undefined,
-        userOp: op,
-        relays: relayRes?.map((r) => ({ chain: r.chain, hash: r.hash })),
+        price: execution.quote.price,
+        outcome: execution.compare.status,
+        proof: {
+          digest: execution.signed.digest,
+          signature: execution.signed.signature,
+          signer: execution.signed.signer,
+        },
+        userOp: execution.delivery?.userOp,
+        relays: execution.delivery?.relays?.map((r: any) => ({
+          chain: r.chain,
+          hash: r.hash,
+        })),
       });
     } catch (err: any) {
       setError(err?.message ?? String(err));
