@@ -1,0 +1,54 @@
+name: cross-chain-price-watchdog
+description: >
+  Baseline KRNL workflow for price monitoring (fetch -> verify -> compare -> return -> deliver).
+
+inputs:
+  token: string
+  chain: string
+  lowerBound: number?
+  upperBound: number?
+  apiUrl: string?
+  chains: string[] # target chains for delivery (e.g., ["1","137"])
+  targetContract: string
+  triggers: object?
+
+nodes:
+  fetch:
+    module: ./kernels/fetch.ts
+    function: fetchPrice
+    outputs: [quote]
+
+  verify:
+    module: ./kernels/verify.ts
+    function: verifyPrice
+    inputs: [quote]
+    outputs: [signedQuote]
+
+  compare:
+    module: ./kernels/compare.ts
+    function: comparePrice
+    inputs: [request, signedQuote]
+    outputs: [compare]
+
+  return:
+    module: ./kernels/return.ts
+    function: buildReturnPayload
+    inputs: [request, signedQuote, compare]
+    outputs: [result]
+
+  deliver:
+    module: ./kernels/deliver.ts
+    function: deliverResult
+    inputs: [result, chains, targetContract, triggers]
+    outputs: [delivery]
+
+edges:
+  - from: fetch
+    to: verify
+  - from: verify
+    to: compare
+  - from: compare
+    to: return
+  - from: return
+    to: deliver
+

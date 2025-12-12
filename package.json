@@ -1,0 +1,32 @@
+{
+  "name": "pricewatchdog",
+  "version": "1.0.0",
+  "description": "",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "test": "mocha -r ts-node/register \"tests/**/*.test.ts\"",
+    "dev": "ts-node src/index.ts",
+    "krnl:validate": "TS_NODE_COMPILER_OPTIONS='{\"module\":\"commonjs\",\"verbatimModuleSyntax\":false}' ts-node scripts/validateWorkflow.ts",
+    "krnl:run": "TS_NODE_COMPILER_OPTIONS='{\"module\":\"commonjs\",\"verbatimModuleSyntax\":false}' ts-node scripts/runWorkflow.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@krnl-dev/sdk-core": "file:deps/krnl-dev-sdk-core",
+    "axios": "^1.13.2",
+    "dotenv": "^17.2.3",
+    "ethers": "^6.16.0",
+    "js-yaml": "^4.1.1"
+  },
+  "devDependencies": {
+    "@types/chai": "^5.2.3",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "^25.0.1",
+    "chai": "^6.2.1",
+    "mocha": "^11.7.5",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
+  }
+}

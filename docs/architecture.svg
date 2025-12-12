@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="360" viewBox="0 0 960 360" font-family="Inter, Arial, sans-serif">
+  <style>
+    .box { fill: #0f1725; stroke: #1f2937; stroke-width: 2; rx: 8; ry: 8; }
+    .title { fill: #e5e7eb; font-weight: 700; font-size: 14px; }
+    .text { fill: #cbd5e1; font-size: 12px; }
+    .arrow { stroke: #94a3b8; stroke-width: 2; marker-end: url(#arrowhead); }
+  </style>
+  <defs>
+    <marker id="arrowhead" markerWidth="8" markerHeight="8" refX="4" refY="2.5" orient="auto">
+      <polygon points="0 0, 8 2.5, 0 5" fill="#94a3b8" />
+    </marker>
+  </defs>
+
+  <rect x="40" y="40" width="160" height="80" class="box" />
+  <text x="60" y="70" class="title">On-chain Layer</text>
+  <text x="60" y="90" class="text">User / dApp Contract</text>
+  <text x="60" y="110" class="text">Request: token, bounds</text>
+
+  <rect x="260" y="30" width="180" height="70" class="box" />
+  <text x="280" y="60" class="title">Fetch</text>
+  <text x="280" y="80" class="text">SDK http.get (signed)</text>
+
+  <rect x="260" y="130" width="180" height="70" class="box" />
+  <text x="280" y="160" class="title">Verify</text>
+  <text x="280" y="180" class="text">proof.generateEphemeral</text>
+
+  <rect x="260" y="230" width="180" height="70" class="box" />
+  <text x="280" y="260" class="title">Compare</text>
+  <text x="280" y="280" class="text">ABOVE / BELOW / WITHIN</text>
+
+  <rect x="500" y="90" width="180" height="70" class="box" />
+  <text x="520" y="120" class="title">Return</text>
+  <text x="520" y="140" class="text">Package WatchdogResult</text>
+
+  <rect x="500" y="200" width="180" height="90" class="box" />
+  <text x="520" y="230" class="title">Deliver</text>
+  <text x="520" y="250" class="text">UserOp create + relay</text>
+  <text x="520" y="270" class="text">Optional triggers (update / notify)</text>
+
+  <rect x="740" y="90" width="180" height="90" class="box" />
+  <text x="760" y="120" class="title">Multi-chain Outputs</text>
+  <text x="760" y="140" class="text">Chains: ETH / Polygon / BSC</text>
+  <text x="760" y="160" class="text">On-chain hooks</text>
+
+  <rect x="740" y="210" width="180" height="70" class="box" />
+  <text x="760" y="240" class="title">Off-chain API</text>
+  <text x="760" y="260" class="text">Price feeds (Coingecko)</text>
+
+  <line x1="200" y1="80" x2="260" y2="65" class="arrow" />
+  <line x1="200" y1="80" x2="260" y2="165" class="arrow" />
+  <line x1="200" y1="80" x2="260" y2="265" class="arrow" />
+
+  <line x1="440" y1="65" x2="500" y2="125" class="arrow" />
+  <line x1="440" y1="165" x2="500" y2="125" class="arrow" />
+  <line x1="440" y1="265" x2="500" y2="245" class="arrow" />
+
+  <line x1="680" y1="125" x2="740" y2="135" class="arrow" />
+  <line x1="680" y1="245" x2="740" y2="250" class="arrow" />
+  <line x1="680" y1="245" x2="740" y2="250" class="arrow" />
+</svg>
+
