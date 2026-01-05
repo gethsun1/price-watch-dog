@@ -44,5 +44,3 @@ export async function fetchPrice(request: PriceCheckRequest): Promise<PriceQuote
     fetchedAt: Date.now(),
   };
 }
-
-

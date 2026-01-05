@@ -16,7 +16,13 @@ type Outcome = "ABOVE_RANGE" | "BELOW_RANGE" | "WITHIN_RANGE";
 interface RunResult {
   price: number;
   outcome: Outcome;
-  proof?: { digest: string; signature: string; signer: string };
+  proof?: { 
+    digest: string; 
+    signature: string; 
+    signer: string;
+    fetchedAt?: number;
+    provedAt?: number;
+  };
   userOp?: Record<string, unknown>;
   relays?: Array<{ chain: string; hash: string }>;
 }
@@ -88,6 +94,8 @@ function App() {
           digest: execution.signed.digest,
           signature: execution.signed.signature,
           signer: execution.signed.signer,
+          fetchedAt: execution.signed.fetchedAt,
+          provedAt: execution.signed.provedAt,
         },
         userOp: execution.delivery?.userOp,
         relays: execution.delivery?.relays?.map((r: any) => ({
@@ -108,6 +116,19 @@ function App() {
         <h1>Price Watchdog Demo</h1>
         <p>Fetch → Verify → Compare → Deliver (multi-chain)</p>
       </header>
+
+      <div className="info-banner" style={{ 
+        padding: '12px 20px', 
+        margin: '0 0 20px 0', 
+        backgroundColor: 'rgba(59, 130, 246, 0.1)', 
+        borderLeft: '4px solid rgba(59, 130, 246, 0.5)',
+        borderRadius: '4px',
+        fontSize: '0.9em',
+        color: 'inherit'
+      }}>
+        ⚙️ This demo includes a <strong>reference consumer</strong> for illustration.
+        The kernel outputs an attested price payload that any on-chain consumer can interpret independently.
+      </div>
 
       <section className="card">
         <div className="field-grid">
@@ -165,10 +186,16 @@ function App() {
 
           {result.proof && (
             <div className="panel">
-              <h3>Proof</h3>
+              <h3>Attested Kernel Output</h3>
               <code>digest: {result.proof.digest}</code>
               <code>signature: {result.proof.signature.slice(0, 42)}...</code>
               <code>signer: {result.proof.signer}</code>
+              {result.proof.fetchedAt && (
+                <code>fetchedAt: {new Date(result.proof.fetchedAt).toISOString()}</code>
+              )}
+              {result.proof.provedAt && (
+                <code>provedAt: {new Date(result.proof.provedAt).toISOString()}</code>
+              )}
             </div>
           )}
 

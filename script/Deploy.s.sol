@@ -17,4 +17,3 @@ contract Deploy is Script {
         return priceWatcher;
     }
 }
-

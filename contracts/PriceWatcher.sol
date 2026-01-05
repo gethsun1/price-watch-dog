@@ -1,6 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
+// NOTE:
+// This contract is a reference consumer used to demonstrate how
+// KRNL-delivered, attested payloads can be verified and interpreted on-chain.
+// The kernel itself does not enforce bounds or reactions.
+
 /// @title PriceWatcher
 /// @notice Receives KRNL watchdog deliveries and verifies the attestor proof
 /// using an ECDSA signature over the quoted price payload. Pauses the contract
@@ -143,4 +148,3 @@ contract PriceWatcher {
         return keccak256(bytes(a)) == keccak256(bytes(b));
     }
 }
-

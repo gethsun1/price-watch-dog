@@ -12,7 +12,7 @@ This document describes the watchdog workflow defined in `workflow.yaml` and how
 - `triggers` (object?): Optional trigger config `{ enabled, types, webhookUrl, metadata }`.
 
 ## Nodes
-- `fetch`: Calls the price API (default Coingecko) using SDK HTTP (signed where supported). Output: `quote`.
+- `fetch`: Calls the external data source (default Coingecko) using SDK HTTP (signed where supported). Output: `quote`.
 - `verify`: Signs the quote payload (decimal-safe, `priceE8` + `priceDecimals`). Tries KRNL proof first (when available) and falls back to a local signer. Output: `signedQuote`.
 - `compare`: Evaluates bounds and produces `compare` (ABOVE_RANGE | BELOW_RANGE | WITHIN_RANGE).
 - `return`: Packages a `WatchdogResult` for downstream use. Output: `result`.
@@ -24,7 +24,7 @@ This document describes the watchdog workflow defined in `workflow.yaml` and how
 - Harness: `node --loader ts-node/esm kernels/runLocal.ts` (same handlers via workflow executor).
 
 ## Extending
-- Swap `fetch` API: pass `apiUrl` or adjust `kernels/fetch.ts`.
+- Swap `fetch` data source: pass `apiUrl` or adjust `kernels/fetch.ts`.
 - Custom triggers: update `TriggerConfig.types` and extend `deliver.ts` to call `trigger.action` with new payloads; link proofs via SDK `proof.link`.
 - On-chain verify: integrate proof verification in `contracts/PriceWatcher.sol` once SDK on-chain helpers are available.
 

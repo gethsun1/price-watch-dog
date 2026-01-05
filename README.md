@@ -2,6 +2,15 @@
 
 KRNL-powered price watchdog: fetch → verify → compare → return → deliver (multi-chain), with docs and a React demo.
 
+## Project Scope & Kernel Responsibility
+
+This project implements a **KRNL-native reference kernel** demonstrating how off-chain price data can be fetched, verified, cryptographically attested, and delivered on-chain via KRNL's orchestration layer.
+
+The kernel's responsibility **ends at producing a verifiable, attested payload**.
+Price comparison logic (bounds, reactions, alerts) is implemented as a **reference consumer contract**, not as part of the core kernel.
+
+This separation is intentional and illustrates best practices for kernel minimalism and composability within KRNL.
+
 ## Status
 - SDK: `@krnl-dev/sdk-core` is provided via `file:deps/krnl-dev-sdk-core` for local/dev. Swap to the official package when available.
 - Workflow: strict validator + executor enforce the required pipeline `fetch → verify → compare → return → deliver` (multi-chain).
@@ -22,6 +31,18 @@ echo "PWD_CHAINS=1,137" >> .env                        # or: ["1","137"]
 echo "API_URL_OVERRIDE=<https_url>" >> .env            # optional
 echo "PWD_USE_KRNL_PROOF=0" >> .env                    # optional: force local signer path
 ```
+
+## KRNL Execution Trace (DAG)
+
+```
+Fetch    → External price source (e.g. Coingecko)
+Verify   → Digest construction + signer attestation
+Compare  → Reference consumer logic (bounds check)
+Deliver  → UserOp payload delivered cross-chain to consumer contract
+```
+
+Only the **fetch, verify, and deliver** steps are kernel responsibilities.
+The compare step is included as a reference consumer example.
 
 ## KRNL runbook (Sepolia + EIP-7702)
 - See `docs/KRNL_RUNBOOK.md` for deployment (`krnl deploy`), attestor image creation, frontend env wiring, and end-to-end execution with UserOp delivery to `PriceWatcher.handleResult`.

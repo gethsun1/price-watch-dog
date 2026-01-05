@@ -24,7 +24,7 @@ function extractPriceRaw(token: string, data: unknown): number | string {
     throw new Error("price response was empty");
   }
 
-  // Common API shapes we expect: { token: { usd: number } } or { price: number }
+  // Common response shapes we expect: { token: { usd: number } } or { price: number }
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const anyData = data as any;
   const tokenEntry = anyData[token];
