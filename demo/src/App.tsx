@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect } from "react";
-import { BrowserProvider, Contract, Interface, AbiCoder } from "ethers";
+import { BrowserProvider, Contract, Interface } from "ethers";
 import type { Signer } from "ethers";
 import "./App.css";
 import workflowYaml from "./watchdog/workflow.yaml?raw";
@@ -46,7 +46,6 @@ function App() {
   const [result, setResult] = useState<RunResult | null>(null);
   
   // Wallet connection state
-  const [provider, setProvider] = useState<BrowserProvider | null>(null);
   const [signer, setSigner] = useState<Signer | null>(null);
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
   const [connecting, setConnecting] = useState(false);
@@ -72,12 +71,11 @@ function App() {
     const checkWalletConnection = async () => {
       if (typeof window.ethereum !== "undefined") {
         try {
-          const accounts = await window.ethereum.request({ method: "eth_accounts" });
-          if (accounts.length > 0) {
+          const accounts = await window.ethereum.request({ method: "eth_accounts" }) as string[];
+          if (accounts && accounts.length > 0) {
             const provider = new BrowserProvider(window.ethereum);
             const signer = await provider.getSigner();
             const address = await signer.getAddress();
-            setProvider(provider);
             setSigner(signer);
             setWalletAddress(address);
           }
@@ -90,24 +88,33 @@ function App() {
 
     // Listen for account changes
     if (window.ethereum) {
-      window.ethereum.on("accountsChanged", async (accounts: string[]) => {
-        if (accounts.length === 0) {
-          setProvider(null);
+      const handleAccountsChanged = async (accounts: unknown) => {
+        const accountList = accounts as string[];
+        if (!accountList || accountList.length === 0) {
           setSigner(null);
           setWalletAddress(null);
         } else {
-          const provider = new BrowserProvider(window.ethereum);
+          const provider = new BrowserProvider(window.ethereum!);
           const signer = await provider.getSigner();
           const address = await signer.getAddress();
-          setProvider(provider);
           setSigner(signer);
           setWalletAddress(address);
         }
-      });
+      };
+
+      window.ethereum.on("accountsChanged", handleAccountsChanged);
 
       window.ethereum.on("chainChanged", () => {
         window.location.reload();
       });
+
+      // Cleanup listeners on unmount
+      return () => {
+        if (window.ethereum) {
+          window.ethereum.removeListener("accountsChanged", handleAccountsChanged);
+          window.ethereum.removeListener("chainChanged", () => {});
+        }
+      };
     }
   }, []);
 
@@ -124,7 +131,6 @@ function App() {
       await provider.send("eth_requestAccounts", []);
       const signer = await provider.getSigner();
       const address = await signer.getAddress();
-      setProvider(provider);
       setSigner(signer);
       setWalletAddress(address);
     } catch (err: any) {
@@ -135,7 +141,6 @@ function App() {
   };
 
   const disconnectWallet = () => {
-    setProvider(null);
     setSigner(null);
     setWalletAddress(null);
   };
@@ -205,7 +210,7 @@ function App() {
     }
   };
 
-  const submitOnChain = async (deliveryResult: RunResult, execution: any) => {
+  const submitOnChain = async (_deliveryResult: RunResult, execution: any) => {
     if (!signer || !targetContract || !execution.delivery?.userOp) {
       return;
     }
