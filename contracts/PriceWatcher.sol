@@ -38,8 +38,17 @@ contract PriceWatcher {
 
     bool public paused;
 
+    /// @notice Maximum age of a proof before it's considered expired (24 hours)
+    uint256 public constant MAX_PROOF_AGE = 24 hours;
+
+    /// @notice Mapping to track used digests and prevent replay attacks
+    mapping(bytes32 => bool) public usedDigests;
+
     error InvalidProof();
     error InvalidSignatureLength();
+    error DigestReplay(bytes32 digest);
+    error ProofExpired(uint256 provedAt, uint256 currentTime);
+    error ProofTooOld(uint256 provedAt, uint256 maxAge);
 
     function requestCheck(string calldata token, uint256 lower, uint256 upper) external {
         emit Requested(msg.sender, token, lower, upper);
@@ -101,6 +110,23 @@ contract PriceWatcher {
         if (recovered != p.signer) {
             revert InvalidProof();
         }
+
+        // Replay protection: check if this digest has been used before
+        if (usedDigests[p.digest]) {
+            revert DigestReplay(p.digest);
+        }
+
+        // Timestamp bounds validation
+        uint256 currentTime = block.timestamp;
+        if (p.provedAt > currentTime) {
+            revert ProofExpired(p.provedAt, currentTime);
+        }
+        if (currentTime - p.provedAt > MAX_PROOF_AGE) {
+            revert ProofTooOld(p.provedAt, MAX_PROOF_AGE);
+        }
+
+        // Mark digest as used to prevent replay
+        usedDigests[p.digest] = true;
 
         if (_equals(status, "ABOVE_RANGE")) {
             paused = true;

@@ -65,9 +65,12 @@ In all cases, **KRNL handles orchestration and trust minimization**, while consu
 
 - **Smart Contract**:  
   `contracts/PriceWatcher.sol` demonstrates how a consumer verifies:
-  - signed digest,
+  - signed digest with replay protection,
   - signer identity,
+  - timestamp bounds (24h window),
   - and payload integrity on-chain.
+
+- **Frontend**: React demo with MetaMask wallet connection and automatic on-chain transaction submission.
 
 ---
 
@@ -106,23 +109,16 @@ Deliver  → UserOp payload delivered cross-chain
 Only **fetch**, **verify**, and **deliver** are kernel responsibilities.  
 The **compare** step exists purely as a **reference consumer example**.
 
-----------
-
-## KRNL Runbook (Sepolia + EIP-7702)
+## KRNL Runbook (Sepolia)
 
 See `docs/KRNL_RUNBOOK.md` for:
 
 -   `krnl deploy` instructions
-    
 -   Attestor image creation
-    
 -   Frontend environment wiring
-    
--   End-to-end execution with UserOp delivery to  
-    `PriceWatcher.handleResult`
-    
+-   End-to-end execution with on-chain delivery to `PriceWatcher.handleResult`
 
-----------
+---
 
 ## Usage
 
@@ -153,38 +149,27 @@ See `docs/KRNL_RUNBOOK.md` for:
 The demo UI executes the DAG and displays:
 
 -   fetched price,
-    
--   attested proof,
-    
+-   attested proof (digest, signature, signer, timestamps),
 -   compare result,
-    
 -   UserOp payload,
-    
--   relay preview.
-    
+-   relay preview,
+-   on-chain transaction status (when wallet connected).
 
 > **Note:** Vite 7 requires Node 20+. Node 18 may build with warnings but is not supported.
 
-----------
+---
 
 ## Repository Layout
 
 -   `kernels/` — fetch, verify, compare, return, deliver + `runLocal.ts`
-    
 -   `workflow.yaml` — DAG definition with delivery and triggers
-    
 -   `tests/` — mocha/chai tests (kernels + workflow)
-    
 -   `scripts/` — SDK-based validate/run helpers
-    
--   `contracts/PriceWatcher.sol` — reference on-chain consumer
-    
+-   `contracts/PriceWatcher.sol` — reference on-chain consumer with replay protection
 -   `docs/` — architecture, workflow, KRNL runbook
-    
--   `demo/` — React / Vite TypeScript demo app
-    
+-   `demo/` — React / Vite TypeScript demo app with wallet integration
 
-----------
+---
 
 ## Extending the Kernel
 
@@ -194,26 +179,25 @@ The demo UI executes the DAG and displays:
 -   **Custom triggers**  
     Extend `TriggerConfig.types` and `deliver.ts` to support notifications or automated actions.
     
--   **Advanced on-chain verification**  
-    Integrate future KRNL SDK on-chain helpers for richer proof validation.
+-   **On-chain verification**  
+    `PriceWatcher.sol` includes full proof verification with replay protection, timestamp validation, and signature recovery.
     
+-   **Gasless execution**  
+    For future implementation, integrate paymaster for sponsored transactions.
 
-----------
+---
 
 ## Non-Goals (v1)
 
 -   Multi-source aggregation
-    
 -   Randomized source sampling
-    
 -   Time-weighted price construction
-    
--   Automated on-chain reactions
-    
+-   Automated on-chain reactions (consumer responsibility)
+-   EIP-7702 delegation (deferred to v1.1)
 
 These are intentional **future extensions**, not required to demonstrate kernel correctness or KRNL alignment.
 
-----------
+---
 
 ## Troubleshooting
 

@@ -1,11 +1,11 @@
-## KRNL Watchdog Runbook (Sepolia, atomic + EIP-7702)
+## KRNL Watchdog Runbook (Sepolia)
 
-This runbook wires the watchdog DAG (Coingecko fetch → proof → compare → deliver) to KRNL with atomic execution and EIP-7702 delegation. Code now delivers ABI-encoded calldata to `PriceWatcher.handleResult` and verifies attestor proofs on-chain.
+This runbook wires the watchdog DAG (Coingecko fetch → proof → compare → deliver) to KRNL with atomic execution. Code now delivers ABI-encoded calldata to `PriceWatcher.handleResult` and verifies attestor proofs on-chain with replay protection and timestamp validation.
 
 ### Prerequisites
-- Env (local/dev): `.env` with `PRIVATE_KEY`, `ETHERSCAN_API_KEY`, `SEPOLIA_RPC_URL`, `PRIVY_APP_ID`, `PRIVY_APP_SECRET`, `PIMLICO_API_KEY`. Optional: `coingecko-api-key`.
-- Tools: Docker Desktop (signed in), MetaMask on Sepolia, funded Sepolia ETH.
-- CLI: `npm install -g @krnl-dev/krnl-cli`.
+- Env (local/dev): `.env` with `PRIVATE_KEY`, `ETHERSCAN_API_KEY`, `SEPOLIA_RPC_URL`, `PIMLICO_API_KEY` (optional, for future gasless execution). Optional: `coingecko-api-key`.
+- Tools: Docker Desktop (signed in), MetaMask or compatible wallet on Sepolia, funded Sepolia ETH.
+- CLI: `npm install -g @krnl-dev/krnl-cli` (optional, for attestor creation).
 - SDK: repository includes bundled stub `@krnl-dev/sdk-core` (file: `deps/krnl-dev-sdk-core`). Swap to the official package when registry access is available.
 
 ### A) Deploy target contract (`PriceWatcher`)
@@ -36,23 +36,26 @@ This runbook wires the watchdog DAG (Coingecko fetch → proof → compare → d
 - `kernels/deliver.ts` ABI-encodes:
   - `result`: `(status, priceE8, priceDecimals, token, chain)`
   - `proof`: `(digest, signature, signer, token, chain, priceE8, priceDecimals, currency, source, fetchedAt, provedAt)`
-  - Builds `callData = PriceWatcher.handleResult(result, proof)` and wraps it in a UserOp (EIP-7702 friendly).
-- Use delegation to the KRNL smart account (SCA) before dispatching the UserOp if required by your flow; Pimlico key used for bundling.
+  - Builds `callData = PriceWatcher.handleResult(result, proof)` for direct contract interaction.
+- UserOp structure is created for compatibility; actual on-chain delivery uses direct contract calls via MetaMask/ethers.js when wallet is connected.
 
 ### D) Frontend/demo environment
-Set in `demo/.env` (or your frontend env):
+Set in `demo/.env` (optional, defaults work for local testing):
 ```
-VITE_PRIVY_APP_ID=${PRIVY_APP_ID}
-VITE_PRIVY_APP_SECRET=${PRIVY_APP_SECRET}
 VITE_CHAIN_ID=11155111
-VITE_DELEGATED_ACCOUNT_ADDRESS=<delegated SCA if used>
-VITE_DELEGATE_OWNER=<your EOA>
 VITE_PRICEWATCHER_ADDRESS=<PRICEWATCHER_ADDRESS>
-VITE_ATTESTOR_IMAGE=<ATTESTOR_IMAGE>
-VITE_RPC_URL=${SEPOLIA_RPC_URL}
-PIMLICO_API_KEY=${PIMLICO_API_KEY}
+VITE_DEFAULT_TOKEN=ethereum
+VITE_DEFAULT_LOWER=1500
+VITE_DEFAULT_UPPER=3500
 ```
-Flow: connect wallet → fund embedded wallet (Sepolia) → delegate via EIP-7702 (if used) → trigger workflow (token/lower/upper/chains) → SDK executes DAG → UserOp relayed to `PriceWatcher`.
+
+**Flow:**
+1. Start demo: `cd demo && npm install && npm run dev`
+2. Connect wallet: Click "Connect Wallet" button in UI (requires MetaMask or compatible wallet)
+3. Configure workflow: Enter token, price bounds, target contract address, and chain IDs
+4. Execute: Click "Run Watchdog" to execute DAG locally
+5. On-chain submission: If wallet is connected and valid target contract is provided, transaction is automatically submitted to `PriceWatcher.handleResult`
+6. Monitor: View transaction hash and status in the result panel
 
 ### E) Run workflow end-to-end
 - Local validation: `npm install` then `npm run krnl:validate`.
@@ -60,4 +63,10 @@ Flow: connect wallet → fund embedded wallet (Sepolia) → delegate via EIP-770
 - On-chain via dApp: ensure attestor image is pushed and referenced; Pimlico key used for bundling; submit workflow and confirm `ResultHandled` event and `paused` flag when outcome is `ABOVE_RANGE`.
 
 ### F) Proof verification hook (implemented)
-- `PriceWatcher.handleResult` recomputes the digest on-chain, recovers the signer, checks token/chain/priceE8 consistency, and emits `ResultHandled(digest, status, priceE8, priceDecimals, chain, attestor, caller)`. Execution pauses when status is `ABOVE_RANGE`.
+- `PriceWatcher.handleResult` recomputes the digest on-chain, recovers the signer, checks token/chain/priceE8 consistency, validates timestamp bounds (24h window), prevents replay attacks via digest storage, and emits `ResultHandled(digest, status, priceE8, priceDecimals, chain, attestor, caller)`. Execution pauses when status is `ABOVE_RANGE`.
+
+**Security features:**
+- Replay protection: Each digest can only be used once (stored in `usedDigests` mapping)
+- Timestamp validation: `provedAt` must be within 24 hours and not in the future
+- Signature verification: ECDSA signature recovery and signer validation
+- Consistency checks: Token, chain, and price values must match between result and proof
